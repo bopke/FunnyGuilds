@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import net.dzikoysk.funnyguilds.Entity;
@@ -49,8 +50,20 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
     private static final LoadingCache<MemberPriorityKey, Integer> PRIORITY_CACHE = Caffeine.newBuilder()
             .expireAfterWrite(1, TimeUnit.MINUTES)
             .build(key -> {
-                return key.plugin.getGuildPermissionChecker()
-                        .getPermissionResult(key.guild, key.user, GenericGuildPermissions.MEMBER_LIST_PRIORITY)
+                FunnyGuilds plugin = key.plugin;
+                
+                Option<Guild> guildOption = plugin.getGuildManager().findByUuid(key.guildUuid);
+                if (guildOption.isEmpty()) {
+                    return DEFAULT_MEMBER_PRIORITY;
+                }
+                
+                Option<User> userOption = plugin.getUserManager().findByUuid(key.userUuid);
+                if (userOption.isEmpty()) {
+                    return DEFAULT_MEMBER_PRIORITY;
+                }
+                
+                return plugin.getGuildPermissionChecker()
+                        .getPermissionResult(guildOption.get(), userOption.get(), GenericGuildPermissions.MEMBER_LIST_PRIORITY)
                         .orElse(DEFAULT_MEMBER_PRIORITY);
             });
 
@@ -238,7 +251,7 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
                             return !online; // false < true, so online (false) comes first
                         })
                         // Second: permission priority (lower number first)
-                        .thenComparing(user -> PRIORITY_CACHE.get(new MemberPriorityKey(guild, user, plugin)))
+                        .thenComparing(user -> PRIORITY_CACHE.get(new MemberPriorityKey(guild.getUUID(), user.getUUID(), plugin)))
                         // Third: alphabetically by name
                         .thenComparing(User::getName, String.CASE_INSENSITIVE_ORDER)
                 )
@@ -254,16 +267,16 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
 
     /**
      * Cache key for member priority lookups.
-     * Combines guild, user, and plugin instance to uniquely identify a priority query.
+     * Uses UUIDs instead of object references to prevent memory leaks.
      */
     private static final class MemberPriorityKey {
-        private final Guild guild;
-        private final User user;
+        private final UUID guildUuid;
+        private final UUID userUuid;
         private final FunnyGuilds plugin;
 
-        MemberPriorityKey(Guild guild, User user, FunnyGuilds plugin) {
-            this.guild = guild;
-            this.user = user;
+        MemberPriorityKey(UUID guildUuid, UUID userUuid, FunnyGuilds plugin) {
+            this.guildUuid = guildUuid;
+            this.userUuid = userUuid;
             this.plugin = plugin;
         }
 
@@ -272,12 +285,12 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             MemberPriorityKey that = (MemberPriorityKey) o;
-            return Objects.equals(guild, that.guild) && Objects.equals(user, that.user);
+            return Objects.equals(guildUuid, that.guildUuid) && Objects.equals(userUuid, that.userUuid);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(guild, user);
+            return Objects.hash(guildUuid, userUuid);
         }
     }
 
