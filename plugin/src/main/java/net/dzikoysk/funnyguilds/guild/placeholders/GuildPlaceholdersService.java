@@ -203,7 +203,7 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
                     
                     return permissionChecker
                             .getPermissionValue(guildOption.get(), userOption.get(), GenericGuildPermissions.MEMBER_LIST_PRIORITY)
-                            .orElse(DEFAULT_MEMBER_PRIORITY);
+                            .orElseGet(DEFAULT_MEMBER_PRIORITY);
                 });
         
         GuildPlaceholders placeholders = new GuildPlaceholders();
