@@ -244,22 +244,30 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
      * 3. Sort by name alphabetically
      */
     private static List<User> getSortedMembers(Guild guild, PluginConfiguration config, LoadingCache<MemberPriorityKey, Integer> priorityCache) {
+        Comparator<User> memberComparator = createMemberComparator(guild, config, priorityCache);
         return guild.getMembers().stream()
-                .sorted(Comparator
-                        // First: online status (online first)
-                        .comparing((User user) -> {
-                            boolean online = user.isOnline();
-                            if (online && config.gMemberRespectVanish) {
-                                online = !user.isVanished();
-                            }
-                            return !online; // false < true, so online (false) comes first
-                        })
-                        // Second: permission priority (lower number first)
-                        .thenComparing(user -> priorityCache.get(new MemberPriorityKey(guild.getUUID(), user.getUUID())))
-                        // Third: alphabetically by name
-                        .thenComparing(User::getName, String.CASE_INSENSITIVE_ORDER)
-                )
+                .sorted(memberComparator)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Creates a comparator for sorting guild members.
+     * Reuses the same comparison logic to avoid duplication.
+     */
+    private static Comparator<User> createMemberComparator(Guild guild, PluginConfiguration config, LoadingCache<MemberPriorityKey, Integer> priorityCache) {
+        return Comparator
+                // First: online status (online first)
+                .comparing((User user) -> {
+                    boolean online = user.isOnline();
+                    if (online && config.gMemberRespectVanish) {
+                        online = !user.isVanished();
+                    }
+                    return !online; // false < true, so online (false) comes first
+                })
+                // Second: permission priority (lower number first)
+                .thenComparing(user -> priorityCache.get(new MemberPriorityKey(guild.getUUID(), user.getUUID())))
+                // Third: alphabetically by name
+                .thenComparing(User::getName, String.CASE_INSENSITIVE_ORDER);
     }
 
     @Override
