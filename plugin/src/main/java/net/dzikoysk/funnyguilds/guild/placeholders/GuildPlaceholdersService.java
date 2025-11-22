@@ -32,6 +32,12 @@ import panda.utilities.StringUtils;
 
 public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, GuildPlaceholders> {
 
+    /**
+     * Default priority value for members when permission cannot be determined.
+     * This ensures such members are shown last in the sorted list.
+     */
+    private static final int DEFAULT_MEMBER_PRIORITY = 999;
+
     public static final BasicPlaceholders<Pair<String, Guild>> GUILD_MEMBERS_COLOR_CONTEXT = new BasicPlaceholders<Pair<String, Guild>>()
             .property("members", pair -> {
                 String text = JOIN_OR_DEFAULT.apply(UserUtils.getOnlineNames(pair.getSecond().getMembers()), "");
@@ -219,7 +225,7 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
                         .thenComparing(user -> {
                             return plugin.getGuildPermissionChecker()
                                     .getPermissionResult(guild, user, GenericGuildPermissions.MEMBER_LIST_PRIORITY)
-                                    .orElseGet(() -> 999); // default high priority if not found
+                                    .orElseGet(() -> DEFAULT_MEMBER_PRIORITY);
                         })
                         // Third: alphabetically by name
                         .thenComparing(User::getName, String.CASE_INSENSITIVE_ORDER)

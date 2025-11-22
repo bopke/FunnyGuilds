@@ -1,10 +1,10 @@
-package net.dzikoysk.funnyguilds.guild.placeholders
+package net.dzikoysk.funnyguilds.guild.placeholders;
 
 import net.dzikoysk.funnyguilds.FunnyGuildsSpec
 import net.dzikoysk.funnyguilds.guild.Guild
 import net.dzikoysk.funnyguilds.guild.permission.GuildPermissionChecker
 import net.dzikoysk.funnyguilds.user.FakeUserProfile
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
@@ -47,32 +47,32 @@ class MemberPlaceholdersTest : FunnyGuildsSpec() {
         text = guildPlaceholdersService.format(null, text, guild)
         
         // Should contain green color for online and owner's name
-        assertEquals(true, text.contains("Owner"))
-        assertEquals(true, text.contains("&a") || text.contains("§a"))
+        assertTrue(text.contains("Owner"))
+        assertTrue(text.contains("&a") || text.contains("§a"))
         
         // Format member-2 placeholder (should be deputy, online) 
         text = "{G-MEMBER-2}"
         text = guildPlaceholdersService.format(null, text, guild)
         
         // Should contain green color for online and deputy's name
-        assertEquals(true, text.contains("Deputy"))
-        assertEquals(true, text.contains("&a") || text.contains("§a"))
+        assertTrue(text.contains("Deputy"))
+        assertTrue(text.contains("&a") || text.contains("§a"))
         
         // Format member-3 placeholder (should be Member2, online)
         text = "{G-MEMBER-3}"
         text = guildPlaceholdersService.format(null, text, guild)
         
         // Should contain green color for online and member's name
-        assertEquals(true, text.contains("Member2"))
-        assertEquals(true, text.contains("&a") || text.contains("§a"))
+        assertTrue(text.contains("Member2"))
+        assertTrue(text.contains("&a") || text.contains("§a"))
         
         // Format member-4 placeholder (should be Member1, offline)
         text = "{G-MEMBER-4}"
         text = guildPlaceholdersService.format(null, text, guild)
         
         // Should contain gray color for offline and member's name
-        assertEquals(true, text.contains("Member1"))
-        assertEquals(true, text.contains("&7") || text.contains("§7"))
+        assertTrue(text.contains("Member1"))
+        assertTrue(text.contains("&7") || text.contains("§7"))
     }
 
     @Test
@@ -87,7 +87,7 @@ class MemberPlaceholdersTest : FunnyGuildsSpec() {
         text = guildPlaceholdersService.format(null, text, guild)
         
         // Should contain the no-value message
-        assertEquals(true, text.contains("Brak"))
+        assertTrue(text.contains("Brak"))
     }
 
     @Test
@@ -105,8 +105,8 @@ class MemberPlaceholdersTest : FunnyGuildsSpec() {
         text = guildPlaceholdersService.format(null, text, guild)
         
         // Should contain gray color for "offline" (vanished) user
-        assertEquals(true, text.contains("VanishedUser"))
-        assertEquals(true, text.contains("&7") || text.contains("§7"))
+        assertTrue(text.contains("VanishedUser"))
+        assertTrue(text.contains("&7") || text.contains("§7"))
     }
 
     @Test
@@ -126,16 +126,16 @@ class MemberPlaceholdersTest : FunnyGuildsSpec() {
         // Note: Owner has priority 1, so Zorro should be first as owner
         var text = "{G-MEMBER-1}"
         text = guildPlaceholdersService.format(null, text, guild)
-        assertEquals(true, text.contains("Zorro")) // Owner comes first
+        assertTrue(text.contains("Zorro")) // Owner comes first
         
         // Format member-2 placeholder - should be "Alpha" (alphabetically first among regular members)
         text = "{G-MEMBER-2}"
         text = guildPlaceholdersService.format(null, text, guild)
-        assertEquals(true, text.contains("Alpha"))
+        assertTrue(text.contains("Alpha"))
         
         // Format member-3 placeholder - should be "Mike"
         text = "{G-MEMBER-3}"
         text = guildPlaceholdersService.format(null, text, guild)
-        assertEquals(true, text.contains("Mike"))
+        assertTrue(text.contains("Mike"))
     }
 }
