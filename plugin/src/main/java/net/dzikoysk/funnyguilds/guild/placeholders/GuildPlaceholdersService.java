@@ -211,7 +211,7 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
         // Register G-MEMBER-X placeholders from 1 to maxMembersInGuild
         for (int i = 1; i <= config.maxMembersInGuild; i++) {
             final int index = i;
-            placeholders.property("member-" + index,
+            placeholders = placeholders.property("member-" + index,
                     (entity, guild) -> {
                         List<User> sortedMembers = getSortedMembers(guild, config, priorityCache);
                         
