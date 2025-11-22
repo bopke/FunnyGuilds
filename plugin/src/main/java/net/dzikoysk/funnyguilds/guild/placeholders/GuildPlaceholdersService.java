@@ -50,7 +50,7 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
     private static final LoadingCache<MemberPriorityKey, Integer> PRIORITY_CACHE = Caffeine.newBuilder()
             .expireAfterWrite(1, TimeUnit.MINUTES)
             .build(key -> {
-                FunnyGuilds plugin = key.plugin;
+                FunnyGuilds plugin = FunnyGuilds.getInstance();
                 
                 Option<Guild> guildOption = plugin.getGuildManager().findByUuid(key.guildUuid);
                 if (guildOption.isEmpty()) {
@@ -251,7 +251,7 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
                             return !online; // false < true, so online (false) comes first
                         })
                         // Second: permission priority (lower number first)
-                        .thenComparing(user -> PRIORITY_CACHE.get(new MemberPriorityKey(guild.getUUID(), user.getUUID(), plugin)))
+                        .thenComparing(user -> PRIORITY_CACHE.get(new MemberPriorityKey(guild.getUUID(), user.getUUID())))
                         // Third: alphabetically by name
                         .thenComparing(User::getName, String.CASE_INSENSITIVE_ORDER)
                 )
@@ -272,12 +272,10 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
     private static final class MemberPriorityKey {
         private final UUID guildUuid;
         private final UUID userUuid;
-        private final FunnyGuilds plugin;
 
-        MemberPriorityKey(UUID guildUuid, UUID userUuid, FunnyGuilds plugin) {
+        MemberPriorityKey(UUID guildUuid, UUID userUuid) {
             this.guildUuid = guildUuid;
             this.userUuid = userUuid;
-            this.plugin = plugin;
         }
 
         @Override
