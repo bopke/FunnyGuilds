@@ -43,30 +43,6 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
      */
     private static final int DEFAULT_MEMBER_PRIORITY = 999;
 
-    /**
-     * Cache for member list priorities to avoid repeated permission lookups.
-     * Cache expires after 1 minute to ensure priorities stay reasonably fresh.
-     */
-    private static final LoadingCache<MemberPriorityKey, Integer> PRIORITY_CACHE = Caffeine.newBuilder()
-            .expireAfterWrite(1, TimeUnit.MINUTES)
-            .build(key -> {
-                FunnyGuilds plugin = FunnyGuilds.getInstance();
-                
-                Option<Guild> guildOption = plugin.getGuildManager().findByUuid(key.guildUuid);
-                if (guildOption.isEmpty()) {
-                    return DEFAULT_MEMBER_PRIORITY;
-                }
-                
-                Option<User> userOption = plugin.getUserManager().findByUuid(key.userUuid);
-                if (userOption.isEmpty()) {
-                    return DEFAULT_MEMBER_PRIORITY;
-                }
-                
-                return plugin.getGuildPermissionChecker()
-                        .getPermissionResult(guildOption.get(), userOption.get(), GenericGuildPermissions.MEMBER_LIST_PRIORITY)
-                        .orElse(DEFAULT_MEMBER_PRIORITY);
-            });
-
     public static final BasicPlaceholders<Pair<String, Guild>> GUILD_MEMBERS_COLOR_CONTEXT = new BasicPlaceholders<Pair<String, Guild>>()
             .property("members", pair -> {
                 String text = JOIN_OR_DEFAULT.apply(UserUtils.getOnlineNames(pair.getSecond().getMembers()), "");
@@ -202,6 +178,26 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
         PluginConfiguration config = plugin.getPluginConfiguration();
         MessageService messages = plugin.getMessageService();
         
+        // Create cache for member list priorities to avoid repeated permission lookups
+        // Cache expires after 1 minute to ensure priorities stay reasonably fresh
+        LoadingCache<MemberPriorityKey, Integer> priorityCache = Caffeine.newBuilder()
+                .expireAfterWrite(1, TimeUnit.MINUTES)
+                .build(key -> {
+                    Option<Guild> guildOption = plugin.getGuildManager().findByUuid(key.guildUuid);
+                    if (guildOption.isEmpty()) {
+                        return DEFAULT_MEMBER_PRIORITY;
+                    }
+                    
+                    Option<User> userOption = plugin.getUserManager().findByUuid(key.userUuid);
+                    if (userOption.isEmpty()) {
+                        return DEFAULT_MEMBER_PRIORITY;
+                    }
+                    
+                    return plugin.getGuildPermissionChecker()
+                            .getPermissionResult(guildOption.get(), userOption.get(), GenericGuildPermissions.MEMBER_LIST_PRIORITY)
+                            .orElse(DEFAULT_MEMBER_PRIORITY);
+                });
+        
         GuildPlaceholders placeholders = new GuildPlaceholders();
         
         // Register G-MEMBER-X placeholders from 1 to maxMembersInGuild
@@ -209,7 +205,7 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
             final int index = i;
             placeholders.property("member-" + index,
                     (entity, guild) -> {
-                        List<User> sortedMembers = getSortedMembers(guild, config, plugin);
+                        List<User> sortedMembers = getSortedMembers(guild, config, priorityCache);
                         
                         if (index > sortedMembers.size()) {
                             return messages.get(entity, msgConfig -> msgConfig.gMemberNoValue);
@@ -239,7 +235,7 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
      * 2. Sort by permission priority (lower priority number shown first)
      * 3. Sort by name alphabetically
      */
-    private static List<User> getSortedMembers(Guild guild, PluginConfiguration config, FunnyGuilds plugin) {
+    private static List<User> getSortedMembers(Guild guild, PluginConfiguration config, LoadingCache<MemberPriorityKey, Integer> priorityCache) {
         return guild.getMembers().stream()
                 .sorted(Comparator
                         // First: online status (online first)
@@ -251,7 +247,7 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
                             return !online; // false < true, so online (false) comes first
                         })
                         // Second: permission priority (lower number first)
-                        .thenComparing(user -> PRIORITY_CACHE.get(new MemberPriorityKey(guild.getUUID(), user.getUUID())))
+                        .thenComparing(user -> priorityCache.get(new MemberPriorityKey(guild.getUUID(), user.getUUID())))
                         // Third: alphabetically by name
                         .thenComparing(User::getName, String.CASE_INSENSITIVE_ORDER)
                 )
