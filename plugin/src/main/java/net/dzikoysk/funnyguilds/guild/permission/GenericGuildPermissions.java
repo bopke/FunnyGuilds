@@ -19,6 +19,11 @@ public final class GenericGuildPermissions {
     public static final GuildPermission<String> USER_POSITION = GuildPermission.permission("user.position", String.class);
 
     /**
+     * Specifies the priority for member list ordering (lower number = shown first).
+     */
+    public static final GuildPermission<Integer> MEMBER_LIST_PRIORITY = GuildPermission.permission("member.list.priority", Integer.class);
+
+    /**
      * Allow to use and see guild chat.
      */
     public static final GuildPermission<Boolean> GUILD_CHAT_USE = GuildPermission.booleanPermission("guild.chat.use");

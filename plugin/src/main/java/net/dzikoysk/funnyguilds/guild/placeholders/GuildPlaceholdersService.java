@@ -1,7 +1,10 @@
 package net.dzikoysk.funnyguilds.guild.placeholders;
 
+import java.util.Comparator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import net.dzikoysk.funnyguilds.Entity;
 import net.dzikoysk.funnyguilds.FunnyGuilds;
 import net.dzikoysk.funnyguilds.config.NumberRange;
@@ -15,9 +18,11 @@ import net.dzikoysk.funnyguilds.guild.GuildRank;
 import net.dzikoysk.funnyguilds.guild.GuildRankManager;
 import net.dzikoysk.funnyguilds.guild.GuildUtils;
 import net.dzikoysk.funnyguilds.guild.Region;
+import net.dzikoysk.funnyguilds.guild.permission.GenericGuildPermissions;
 import net.dzikoysk.funnyguilds.rank.DefaultTops;
 import net.dzikoysk.funnyguilds.shared.formatter.FunnyFormatter;
 import net.dzikoysk.funnyguilds.shared.bukkit.ChatUtils;
+import net.dzikoysk.funnyguilds.user.User;
 import net.dzikoysk.funnyguilds.user.UserUtils;
 import org.bukkit.ChatColor;
 import org.jetbrains.annotations.Nullable;
@@ -156,6 +161,70 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
                 .property("enemies-tags",
                         (entity, guild) -> JOIN_OR_DEFAULT.apply(GuildUtils.getTags(guild.getEnemies()), messages.get(entity, config -> config.enemiesNoValue)),
                         entity -> messages.get(entity, config -> config.enemiesNoValue));
+    }
+
+    public static GuildPlaceholders createMemberPlaceholders(FunnyGuilds plugin) {
+        PluginConfiguration config = plugin.getPluginConfiguration();
+        MessageService messages = plugin.getMessageService();
+        
+        GuildPlaceholders placeholders = new GuildPlaceholders();
+        
+        // Register G-MEMBER-X placeholders from 1 to maxMembersInGuild
+        for (int i = 1; i <= config.maxMembersInGuild; i++) {
+            final int index = i;
+            placeholders.property("member-" + index,
+                    (entity, guild) -> {
+                        List<User> sortedMembers = getSortedMembers(guild, config, plugin);
+                        
+                        if (index > sortedMembers.size()) {
+                            return messages.get(entity, msgConfig -> msgConfig.gMemberNoValue);
+                        }
+                        
+                        User member = sortedMembers.get(index - 1);
+                        boolean online = member.isOnline();
+                        if (online && config.gMemberRespectVanish) {
+                            online = !member.isVanished();
+                        }
+                        
+                        String colorPrefix = online 
+                                ? config.gMemberOnline.getValue() 
+                                : config.gMemberOffline.getValue();
+                        
+                        return colorPrefix + member.getName();
+                    },
+                    entity -> messages.get(entity, msgConfig -> msgConfig.gMemberNoValue));
+        }
+        
+        return placeholders;
+    }
+
+    /**
+     * Get sorted list of guild members according to specifications:
+     * 1. Online players first, then offline (respecting vanish config)
+     * 2. Sort by permission priority (lower priority number shown first)
+     * 3. Sort by name alphabetically
+     */
+    private static List<User> getSortedMembers(Guild guild, PluginConfiguration config, FunnyGuilds plugin) {
+        return guild.getMembers().stream()
+                .sorted(Comparator
+                        // First: online status (online first)
+                        .comparing((User user) -> {
+                            boolean online = user.isOnline();
+                            if (online && config.gMemberRespectVanish) {
+                                online = !user.isVanished();
+                            }
+                            return !online; // false < true, so online (false) comes first
+                        })
+                        // Second: permission priority (lower number first)
+                        .thenComparing(user -> {
+                            return plugin.getGuildPermissionChecker()
+                                    .getPermissionResult(guild, user, GenericGuildPermissions.MEMBER_LIST_PRIORITY)
+                                    .orElseGet(() -> 999); // default high priority if not found
+                        })
+                        // Third: alphabetically by name
+                        .thenComparing(User::getName, String.CASE_INSENSITIVE_ORDER)
+                )
+                .collect(Collectors.toList());
     }
 
     @Override

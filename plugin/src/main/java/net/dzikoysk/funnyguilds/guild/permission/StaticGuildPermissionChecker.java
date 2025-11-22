@@ -106,6 +106,9 @@ final class StaticGuildPermissionChecker implements GuildPermissionChecker {
         else if (GenericGuildPermissions.USER_POSITION.equals(permission)) {
             return this.getGuildUserPositionValue(user);
         }
+        else if (GenericGuildPermissions.MEMBER_LIST_PRIORITY.equals(permission)) {
+            return this.getMemberListPriorityValue(guild, user);
+        }
         else if (GenericGuildPermissions.CHAT_PERMISSIONS.contains(permission)) {
             return Result.ok(true);
         }
@@ -125,6 +128,20 @@ final class StaticGuildPermissionChecker implements GuildPermissionChecker {
             value = this.pluginConfiguration.chatPositionMember.getValue();
         }
         return Result.ok(value);
+    }
+
+    private Result<Integer, Runnable> getMemberListPriorityValue(Guild guild, User user) {
+        int priority;
+        if (guild.isOwner(user)) {
+            priority = 1;
+        }
+        else if (guild.isDeputy(user)) {
+            priority = 2;
+        }
+        else {
+            priority = 3;
+        }
+        return Result.ok(priority);
     }
 
     @Override

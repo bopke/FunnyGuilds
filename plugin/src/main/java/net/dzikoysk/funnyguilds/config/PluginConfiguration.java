@@ -1062,6 +1062,22 @@ public class PluginConfiguration extends OkaeriConfig {
     public RawString gtopOffline = new RawString("&c");
 
     @Comment("")
+    @Comment("Czy placeholdery G-MEMBER-X mają uznawać graczy na vanishu za graczy offline")
+    @Comment("UWAGA: opcja powinna wspierać pluginy jak VanishNoPacket, SuperVanish czy PremiumVanish")
+    @Comment("Jeśli opcja by nie działała z tymi (lub innymi) pluginami - proszę stworzyć issue na GitHubie")
+    public boolean gMemberRespectVanish = true;
+
+    @Comment("")
+    @Comment("Kolory dodawane przed nickiem gracza online przy zamianie zmiennej {G-MEMBER-X}")
+    @Comment("Jeśli nie chcesz kolorowania zależnego od statusu online - pozostaw tę sekcję (i g-member-offline) pustą")
+    public RawString gMemberOnline = new RawString("&a");
+
+    @Comment("")
+    @Comment("Kolory dodawane przed nickiem gracza offline przy zamianie zmiennej {G-MEMBER-X}")
+    @Comment("Jeśli nie chcesz kolorowania zależnego od statusu online - pozostaw tę sekcję (i g-member-online) pustą")
+    public RawString gMemberOffline = new RawString("&7");
+
+    @Comment("")
     public ScoreboardConfiguration scoreboard = new ScoreboardConfiguration();
 
     @Comment("")

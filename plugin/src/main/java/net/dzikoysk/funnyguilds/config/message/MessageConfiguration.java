@@ -44,6 +44,7 @@ public class MessageConfiguration extends OkaeriConfig implements MessageReposit
     public String enemiesNoValue = "Brak (ENEMIES)";
     public String gtopNoValue = "Brak (GTOP-x)";
     public String ptopNoValue = "Brak (PTOP-x)";
+    public String gMemberNoValue = "Brak (G-MEMBER-x)";
     public String wgRegionNoValue = "Brak (WG-REGION)";
     public String minMembersToIncludeNoValue = "Brak (guild-min-members w config.yml)";
 
