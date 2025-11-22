@@ -19,15 +19,18 @@ import net.dzikoysk.funnyguilds.feature.placeholders.BasicPlaceholders;
 import net.dzikoysk.funnyguilds.feature.placeholders.BasicPlaceholdersService;
 import net.dzikoysk.funnyguilds.feature.placeholders.StaticPlaceholdersService;
 import net.dzikoysk.funnyguilds.guild.Guild;
+import net.dzikoysk.funnyguilds.guild.GuildManager;
 import net.dzikoysk.funnyguilds.guild.GuildRank;
 import net.dzikoysk.funnyguilds.guild.GuildRankManager;
 import net.dzikoysk.funnyguilds.guild.GuildUtils;
 import net.dzikoysk.funnyguilds.guild.Region;
 import net.dzikoysk.funnyguilds.guild.permission.GenericGuildPermissions;
+import net.dzikoysk.funnyguilds.guild.permission.GuildPermissionChecker;
 import net.dzikoysk.funnyguilds.rank.DefaultTops;
 import net.dzikoysk.funnyguilds.shared.formatter.FunnyFormatter;
 import net.dzikoysk.funnyguilds.shared.bukkit.ChatUtils;
 import net.dzikoysk.funnyguilds.user.User;
+import net.dzikoysk.funnyguilds.user.UserManager;
 import net.dzikoysk.funnyguilds.user.UserUtils;
 import org.bukkit.ChatColor;
 import org.jetbrains.annotations.Nullable;
@@ -178,23 +181,28 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
         PluginConfiguration config = plugin.getPluginConfiguration();
         MessageService messages = plugin.getMessageService();
         
+        // Extract managers and checker for reuse in cache loader
+        GuildManager guildManager = plugin.getGuildManager();
+        UserManager userManager = plugin.getUserManager();
+        GuildPermissionChecker permissionChecker = plugin.getGuildPermissionChecker();
+        
         // Create cache for member list priorities to avoid repeated permission lookups
         // Cache expires after 1 minute to ensure priorities stay reasonably fresh
         LoadingCache<MemberPriorityKey, Integer> priorityCache = Caffeine.newBuilder()
                 .expireAfterWrite(1, TimeUnit.MINUTES)
                 .build(key -> {
-                    Option<Guild> guildOption = plugin.getGuildManager().findByUuid(key.guildUuid);
+                    Option<Guild> guildOption = guildManager.findByUuid(key.guildUuid);
                     if (guildOption.isEmpty()) {
                         return DEFAULT_MEMBER_PRIORITY;
                     }
                     
-                    Option<User> userOption = plugin.getUserManager().findByUuid(key.userUuid);
+                    Option<User> userOption = userManager.findByUuid(key.userUuid);
                     if (userOption.isEmpty()) {
                         return DEFAULT_MEMBER_PRIORITY;
                     }
                     
-                    return plugin.getGuildPermissionChecker()
-                            .getPermissionResult(guildOption.get(), userOption.get(), GenericGuildPermissions.MEMBER_LIST_PRIORITY)
+                    return permissionChecker
+                            .getPermissionValue(guildOption.get(), userOption.get(), GenericGuildPermissions.MEMBER_LIST_PRIORITY)
                             .orElse(DEFAULT_MEMBER_PRIORITY);
                 });
         
