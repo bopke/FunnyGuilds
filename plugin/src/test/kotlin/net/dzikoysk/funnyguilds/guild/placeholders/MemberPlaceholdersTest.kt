@@ -21,6 +21,7 @@ class MemberPlaceholdersTest : FunnyGuildsSpec() {
     @BeforeEach
     fun setup() {
         lenient().`when`(funnyGuilds.guildPermissionChecker).thenReturn(guildPermissionChecker)
+        lenient().`when`(funnyGuilds.name).thenReturn("FunnyGuilds")
         
         guildPlaceholdersService = GuildPlaceholdersService()
         guildPlaceholdersService.register(funnyGuilds, "simple", GuildPlaceholdersService.createSimplePlaceholders(funnyGuilds))
