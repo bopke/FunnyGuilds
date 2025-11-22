@@ -1,9 +1,13 @@
 package net.dzikoysk.funnyguilds.guild.placeholders;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import net.dzikoysk.funnyguilds.Entity;
 import net.dzikoysk.funnyguilds.FunnyGuilds;
@@ -37,6 +41,18 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
      * This ensures such members are shown last in the sorted list.
      */
     private static final int DEFAULT_MEMBER_PRIORITY = 999;
+
+    /**
+     * Cache for member list priorities to avoid repeated permission lookups.
+     * Cache expires after 1 minute to ensure priorities stay reasonably fresh.
+     */
+    private static final LoadingCache<MemberPriorityKey, Integer> PRIORITY_CACHE = Caffeine.newBuilder()
+            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .build(key -> {
+                return key.plugin.getGuildPermissionChecker()
+                        .getPermissionResult(key.guild, key.user, GenericGuildPermissions.MEMBER_LIST_PRIORITY)
+                        .orElse(DEFAULT_MEMBER_PRIORITY);
+            });
 
     public static final BasicPlaceholders<Pair<String, Guild>> GUILD_MEMBERS_COLOR_CONTEXT = new BasicPlaceholders<Pair<String, Guild>>()
             .property("members", pair -> {
@@ -222,11 +238,7 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
                             return !online; // false < true, so online (false) comes first
                         })
                         // Second: permission priority (lower number first)
-                        .thenComparing(user -> {
-                            return plugin.getGuildPermissionChecker()
-                                    .getPermissionResult(guild, user, GenericGuildPermissions.MEMBER_LIST_PRIORITY)
-                                    .orElseGet(() -> DEFAULT_MEMBER_PRIORITY);
-                        })
+                        .thenComparing(user -> PRIORITY_CACHE.get(new MemberPriorityKey(guild, user, plugin)))
                         // Third: alphabetically by name
                         .thenComparing(User::getName, String.CASE_INSENSITIVE_ORDER)
                 )
@@ -238,6 +250,35 @@ public class GuildPlaceholdersService extends StaticPlaceholdersService<Guild, G
         Set<FunnyFormatter> formatters = new LinkedHashSet<>(super.prepareReplacements(entity, data));
         formatters.add(GUILD_MEMBERS_COLOR_CONTEXT.toVariablesFormatter(Pair.of(ChatColor.RESET.toString(), data)));
         return formatters;
+    }
+
+    /**
+     * Cache key for member priority lookups.
+     * Combines guild, user, and plugin instance to uniquely identify a priority query.
+     */
+    private static final class MemberPriorityKey {
+        private final Guild guild;
+        private final User user;
+        private final FunnyGuilds plugin;
+
+        MemberPriorityKey(Guild guild, User user, FunnyGuilds plugin) {
+            this.guild = guild;
+            this.user = user;
+            this.plugin = plugin;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            MemberPriorityKey that = (MemberPriorityKey) o;
+            return Objects.equals(guild, that.guild) && Objects.equals(user, that.user);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(guild, user);
+        }
     }
 
 }
